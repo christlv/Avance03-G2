@@ -164,11 +164,11 @@ def page_modelo():
     st.title("Predicción de Adopción Digital")
     st.write("Ingrese los valores de las características del cliente:")
 
-    if modelo is None or scaler is None:
+    if modelo is None or scaler is None or encoder is None:
         st.warning("Modelo o transformador no cargado. No se puede realizar predicción.")
         return
 
-    # Entradas numéricas
+    # Entradas numéricas del usuario
     transaction = st.number_input("TransactionAmount (INR)", value=5000)
     balance = st.number_input("CustAccountBalance", value=10000)
     digital_txn = st.number_input("DigitalTransactionsCount", value=20)
@@ -177,15 +177,28 @@ def page_modelo():
     age = st.number_input("CustomerAge", value=30)
     tenure = st.number_input("CustomerTenureYears", value=2)
 
-    # Crear dataframe de predicción
-    X_pred = pd.DataFrame([[transaction, balance, digital_txn, branch_txn, spend_ratio, age, tenure]],
-                          columns=['TransactionAmount (INR)','CustAccountBalance','DigitalTransactionsCount',
-                                   'BranchTransactionsCount','SpendBalanceRatio','CustomerAge','CustomerTenureYears'])
-    
-    # Escalar columnas numéricas
-    num_cols_pred = ['TransactionAmount (INR)','CustAccountBalance','DigitalTransactionsCount',
-                     'BranchTransactionsCount','SpendBalanceRatio','CustomerAge','CustomerTenureYears']
-    X_pred[num_cols_pred] = scaler.transform(X_pred[num_cols_pred])
+    # Creamos un DataFrame completo con todas las columnas numéricas
+    X_pred = pd.DataFrame(columns=num_cols)
+    for col in num_cols:
+        if col == 'TransactionAmount (INR)':
+            X_pred[col] = [transaction]
+        elif col == 'CustAccountBalance':
+            X_pred[col] = [balance]
+        elif col == 'DigitalTransactionsCount':
+            X_pred[col] = [digital_txn]
+        elif col == 'BranchTransactionsCount':
+            X_pred[col] = [branch_txn]
+        elif col == 'SpendBalanceRatio':
+            X_pred[col] = [spend_ratio]
+        elif col == 'CustomerAge':
+            X_pred[col] = [age]
+        elif col == 'CustomerTenureYears':
+            X_pred[col] = [tenure]
+        else:
+            X_pred[col] = [df[col].median()]
+
+    # Escalado
+    X_pred[num_cols] = scaler.transform(X_pred[num_cols])
 
     # Predicción
     pred = modelo.predict(X_pred)
