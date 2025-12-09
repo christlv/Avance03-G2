@@ -2,6 +2,7 @@ import streamlit as st
 import pandas as pd
 import matplotlib.pyplot as plt
 import seaborn as sns
+import numpy as np
 
 # Configuración global
 st.set_page_config(page_title="Sesión 2 | ISIL", layout="centered")
