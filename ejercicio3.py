@@ -70,25 +70,11 @@ sns.countplot(data=df, x='CustGender')
 
 # ------------------------- 3️⃣ DISTRIBUCIÓN ACTIVITY SCORE -------------------------
 elif opcion == 3:
-    st.info("**Distribución de Digital Activity Score**")
-
+    st.info("Distribución de Digital Activity Score")
     fig, ax = plt.subplots()
-
-    # Usar binwidth fijo para que se vean varias barras
-    sns.histplot(
-        df["DigitalActivityScore"],
-        binwidth=0.25,   # ancho de cada barra
-        kde=False,
-        ax=ax
-    )
+    sns.histplot(df["DigitalActivityScore"], binwidth=0.25, kde=False, ax=ax)  # varias barritas
     ax.set_title("Distribución de Digital Activity Score")
-    st.pyplot(fig)
-
-    st.code("""
-sns.histplot(df["DigitalActivityScore"], binwidth=0.25)
-plt.title("Distribución de Digital Activity Score")
-""", language="python")
-
+    show_fig(fig)
 
 
 
