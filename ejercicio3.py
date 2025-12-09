@@ -13,6 +13,75 @@ def load_data():
 
 df = load_data()
 
+# ============================================================
+#BLOQUE NUEVO DE PREPROCESAMIENTO
+# ============================================================
+
+df = df.replace([np.inf, -np.inf], np.nan)
+
+# ------------------------------
+# 1. Definir variable objetivo
+# ------------------------------
+target = "digital_adoption_likelihood"
+
+# Eliminar filas donde el target es NA
+df = df.dropna(subset=[target])
+
+# Asegurar tipo
+df[target] = df[target].astype(int)
+
+# ------------------------------
+# 2. Imputación correcta
+# ------------------------------
+num_cols = [c for c in df.select_dtypes(include=['float64', 'int64']).columns if c != target]
+cat_cols = [c for c in df.select_dtypes(include=['object']).columns if c != target]
+
+df[num_cols] = df[num_cols].fillna(df[num_cols].median())
+
+for col in cat_cols:
+    df[col] = df[col].fillna(df[col].mode()[0])
+
+# ------------------------------
+# 3. Outliers
+# ------------------------------
+cols_to_clip = [
+    'TransactionAmount (INR)',
+    'CustAccountBalance',
+    'DigitalTransactionsCount',
+    'BranchTransactionsCount',
+    'SpendBalanceRatio',
+    'CustomerAge',
+    'CustomerTenureYears'
+]
+
+for col in cols_to_clip:
+    p1 = df[col].quantile(0.01)
+    p99 = df[col].quantile(0.99)
+    df[col] = df[col].clip(lower=p1, upper=p99)
+
+# ------------------------------
+# 4. Features adicionales
+# ------------------------------
+def normalize(col):
+    if col.max() == col.min():
+        return col * 0
+    return (col - col.min()) / (col.max() - col.min())
+
+df["norm_digital_txn"] = normalize(df["DigitalTransactionsCount"])
+df["norm_spend_ratio"] = normalize(df["SpendBalanceRatio"])
+df["norm_tenure"] = normalize(df["CustomerTenureYears"])
+
+df["DigitalActivityScore"] = (
+    df["norm_digital_txn"] +
+    df["norm_spend_ratio"] +
+    df["norm_tenure"]
+)
+
+# ============================================================
+# 🔥 FIN DEL BLOQUE AGREGADO
+# ============================================================
+
+
 # Función para mostrar gráficos de la página 1 (tu gráfico actual con sliders)
 def page_segmentacion():
     st.title("Segmentación de Clientes por Comportamiento Digital | Timeline")
