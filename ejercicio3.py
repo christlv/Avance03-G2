@@ -72,26 +72,18 @@ sns.countplot(data=df, x='CustGender')
 elif opcion == 3:
     st.info("**Distribución de Digital Activity Score**")
 
-    # Convertir a float y eliminar NaN
-    data = pd.to_numeric(df["DigitalActivityScore"], errors="coerce").dropna()
+    fig, ax = plt.subplots()
+    # Histograma simple, como en Colab
+    sns.histplot(df["DigitalActivityScore"], bins=30, kde=False, ax=ax)
+    ax.set_title("Distribución de Digital Activity Score")
 
-    if data.empty:
-        st.error("No hay datos válidos para Digital Activity Score")
-    else:
-        # Forzar un rango continuo: desde min-0.1 hasta max+0.1
-        min_val = data.min() - 0.1
-        max_val = data.max() + 0.1
+    st.pyplot(fig)
 
-        fig, ax = plt.subplots()
-        sns.histplot(
-            data,
-            bins=30,              # cantidad de barras
-            binrange=(min_val, max_val),
-            kde=False,            # igual que en Colab
-            ax=ax
-        )
-        ax.set_title("Distribución de Digital Activity Score")
-        st.pyplot(fig)
+    st.code("""
+sns.histplot(df["DigitalActivityScore"], bins=30)
+plt.title("Distribución de Digital Activity Score")
+""", language="python")
+
 
 
 
