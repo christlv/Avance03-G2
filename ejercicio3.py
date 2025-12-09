@@ -26,13 +26,13 @@ df = load_data()
 @st.cache_data
 def load_model():
     try:
-        expected_files = ["modelo.pkl", "encoder.pkl", "scaler.pkl"]
+        expected_files = ["modelo_lightgbm.pkl", "encoder.pkl", "scaler.pkl"]
         missing_files = [f for f in expected_files if not os.path.isfile(f)]
         if missing_files:
             st.error(f"No se encontraron los archivos: {', '.join(missing_files)}")
             return None, None, None
 
-        with open("modelo.pkl", "rb") as f:
+        with open("modelo_lightgbm.pkl", "rb") as f:
             modelo = pickle.load(f)
         with open("encoder.pkl", "rb") as f:
             encoder = pickle.load(f)
