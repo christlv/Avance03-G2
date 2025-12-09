@@ -73,16 +73,22 @@ elif opcion == 3:
     st.info("**Distribución de Digital Activity Score**")
 
     fig, ax = plt.subplots()
-    # Histograma simple, como en Colab
-    sns.histplot(df["DigitalActivityScore"], bins=30, kde=False, ax=ax)
-    ax.set_title("Distribución de Digital Activity Score")
 
+    # Usar binwidth fijo para que se vean varias barras
+    sns.histplot(
+        df["DigitalActivityScore"],
+        binwidth=0.25,   # ancho de cada barra
+        kde=False,
+        ax=ax
+    )
+    ax.set_title("Distribución de Digital Activity Score")
     st.pyplot(fig)
 
     st.code("""
-sns.histplot(df["DigitalActivityScore"], bins=30)
+sns.histplot(df["DigitalActivityScore"], binwidth=0.25)
 plt.title("Distribución de Digital Activity Score")
 """, language="python")
+
 
 
 
