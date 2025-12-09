@@ -56,19 +56,20 @@ elif opcion == 2:
 elif opcion == 3:
     st.info("Distribución de Digital Activity Score")
 
-    # Filtrar solo valores finitos
-    data = df['DigitalActivityScore']
-    data = data[pd.notnull(data) & pd.to_numeric(data, errors='coerce').notnull()]
+    # Filtrar datos para quitar NaN o valores no numéricos
+    data = df['DigitalActivityScore'].dropna()
+    data = data[(data >= 0) & (data <= 3)]  # Limitar rango como en Colab
 
-    # Crear figura
     fig, ax = plt.subplots()
     sns.histplot(data, bins=30, kde=False, ax=ax)
+
     ax.set_title("Distribución de Digital Activity Score")
     ax.set_xlabel("DigitalActivityScore")
-    ax.set_ylabel("Frecuencia")
+    ax.set_ylabel("Count")
+    ax.set_xlim(0, 3)  # Fijar límite en eje X como en Colab
 
-    # Mostrar gráfico
     st.pyplot(fig)
+
 
 
 # ---------------- 4️⃣ Relación transacciones ----------------
