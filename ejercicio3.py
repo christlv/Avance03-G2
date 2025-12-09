@@ -54,41 +54,26 @@ elif opcion == 2:
 
 # ---------------- 3️⃣ Distribución Digital Activity Score ----------------
 
-if st.slider("Selecciona un punto del timeline", 1, 5, 1) == 3:
+elif opcion == 3:
     st.info("Distribución de Digital Activity Score")
 
-    # Filtrar datos válidos (no nulos)
+    # Filtrar valores y evitar nans
     data = df['DigitalActivityScore'].dropna()
-
-    # Filtrar rango para que sea igual al de Colab (0 a 3)
     data = data[(data >= 0) & (data <= 3)]
 
-    # Crear figura con tamaño fijo para consistencia visual
-    fig, ax = plt.subplots(figsize=(10,6))
+    fig, ax = plt.subplots(figsize=(10, 6))
+    sns.histplot(data, bins=30, kde=False, ax=ax)
 
-    # Graficar histograma sin KDE, con 30 bins y rango fijo
-    sns.histplot(data, bins=30, kde=False, binrange=(0,3), ax=ax)
-
-    # Titulos y etiquetas
     ax.set_title("Distribución de Digital Activity Score")
     ax.set_xlabel("DigitalActivityScore")
     ax.set_ylabel("Count")
-
-    # Limitar los ejes para igualar visualmente a Colab
     ax.set_xlim(0, 3)
+
+    # Ajustar el eje y al rango que tienes en Colab
     ax.set_ylim(0, 14000)
     ax.set_yticks(range(0, 15000, 2000))
 
-    # Mostrar figura en Streamlit
     st.pyplot(fig)
-
-    # Mostrar código para referencia
-    st.code('''
-sns.histplot(df["DigitalActivityScore"].dropna().loc[lambda x: (x>=0) & (x<=3)], 
-             bins=30, kde=False, binrange=(0,3))
-plt.title("Distribución de Digital Activity Score")
-plt.show()
-    ''', language="python")
 
 
 # ---------------- 4️⃣ Relación transacciones ----------------
