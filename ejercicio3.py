@@ -21,29 +21,29 @@ def load_data():
 df = load_data()
 
 # ==============================
-# Cargar modelo, encoder y scaler
+# Cargar modelo, encoder, scaler y columnas
 # ==============================
 @st.cache_data
-def load_model():
+def load_model_and_cols():
     try:
-        expected_files = ["modelo_lightgbm.pkl", "encoder.pkl", "scaler.pkl"]
-        missing_files = [f for f in expected_files if not os.path.isfile(f)]
-        if missing_files:
-            st.error(f"No se encontraron los archivos: {', '.join(missing_files)}")
-            return None, None, None
+        files = ["modelo_lightgbm.pkl", "encoder.pkl", "scaler.pkl", "num_cols.pkl", "cat_cols.pkl"]
+        missing = [f for f in files if not os.path.isfile(f)]
+        if missing:
+            st.error(f"No se encontraron los archivos: {', '.join(missing)}")
+            return None, None, None, None, None
 
         modelo = joblib.load("modelo_lightgbm.pkl")
         encoder = joblib.load("encoder.pkl")
         scaler = joblib.load("scaler.pkl")
-
+        num_cols = joblib.load("num_cols.pkl")
+        cat_cols = joblib.load("cat_cols.pkl")
         st.success("✅ Modelo y transformadores cargados correctamente")
-        return modelo, encoder, scaler
-
+        return modelo, encoder, scaler, num_cols, cat_cols
     except Exception as e:
         st.error(f"Error cargando modelo: {e}")
-        return None, None, None
+        return None, None, None, None, None
 
-modelo, encoder, scaler = load_model()
+modelo, encoder, scaler, num_cols, cat_cols = load_model_and_cols()
 
 # ==============================
 # Preprocesamiento inicial para gráficas
@@ -53,122 +53,92 @@ target = "digital_adoption_likelihood"
 df = df.dropna(subset=[target])
 df[target] = df[target].astype(int)
 
-num_cols = [c for c in df.select_dtypes(include=['float64', 'int64']).columns if c != target]
-cat_cols = [c for c in df.select_dtypes(include=['object']).columns if c != target]
+num_cols_df = [c for c in df.select_dtypes(include=['float64','int64']) if c != target]
+cat_cols_df = [c for c in df.select_dtypes(include=['object']) if c != target]
 
-df[num_cols] = df[num_cols].fillna(df[num_cols].median())
-for col in cat_cols:
-    df[col] = df[col].fillna(df[col].mode()[0])
+df[num_cols_df] = df[num_cols_df].fillna(df[num_cols_df].median())
+for c in cat_cols_df:
+    df[c] = df[c].fillna(df[c].mode()[0])
 
 # Clip de outliers
-cols_to_clip = [
-    'TransactionAmount (INR)',
-    'CustAccountBalance',
-    'DigitalTransactionsCount',
-    'BranchTransactionsCount',
-    'SpendBalanceRatio',
-    'CustomerAge',
-    'CustomerTenureYears'
-]
+cols_to_clip = ['TransactionAmount (INR)','CustAccountBalance','DigitalTransactionsCount',
+                'BranchTransactionsCount','SpendBalanceRatio','CustomerAge','CustomerTenureYears']
 for col in cols_to_clip:
-    p1 = df[col].quantile(0.01)
-    p99 = df[col].quantile(0.99)
-    df[col] = df[col].clip(lower=p1, upper=p99)
+    p1, p99 = df[col].quantile([0.01,0.99])
+    df[col] = df[col].clip(p1,p99)
 
 # Features adicionales
 def normalize(col):
-    if col.max() == col.min():
-        return col * 0
-    return (col - col.min()) / (col.max() - col.min())
+    if col.max() == col.min(): return col*0
+    return (col-col.min())/(col.max()-col.min())
 
 df["norm_digital_txn"] = normalize(df["DigitalTransactionsCount"])
 df["norm_spend_ratio"] = normalize(df["SpendBalanceRatio"])
 df["norm_tenure"] = normalize(df["CustomerTenureYears"])
-
-df["DigitalActivityScore"] = (
-    df["norm_digital_txn"] +
-    df["norm_spend_ratio"] +
-    df["norm_tenure"]
-)
+df["DigitalActivityScore"] = df["norm_digital_txn"] + df["norm_spend_ratio"] + df["norm_tenure"]
 
 # ==============================
-# Función de página de gráficas
+# Página de gráficas
 # ==============================
 def page_segmentacion():
-    st.title("Segmentación de Clientes por Comportamiento Digital | Timeline")
-    st.write("Autor: Christian Torres | ISIL")
+    st.title("Segmentación de Clientes por Comportamiento Digital")
     st.write("EDA - segmentación y análisis del comportamiento digital")
-    
-    opcion = st.slider("Selecciona un punto del timeline", 1, 5, 1)
-    
+    opcion = st.slider("Selecciona un punto del timeline", 1,5,1)
+
     if opcion == 1:
-        st.info("Distribución de adopción digital")
         counts = df[target].value_counts()
         fig, ax = plt.subplots()
-        counts.plot(kind='bar', color=['skyblue', 'orange'], ax=ax)
+        counts.plot(kind='bar', color=['skyblue','orange'], ax=ax)
         ax.set_title("Distribución de adopción digital")
-        for i, val in enumerate(counts):
-            ax.text(i, val + 2, str(val), ha='center', va='bottom')
+        for i, val in enumerate(counts): ax.text(i,val+2,str(val),ha='center',va='bottom')
         st.pyplot(fig)
-
     elif opcion == 2:
-        st.info("Distribución de género de clientes")
         fig, ax = plt.subplots()
         sns.countplot(data=df, x='CustGender', palette=['pink','skyblue'], ax=ax)
         ax.set_title("Distribución de género")
         for p in ax.patches:
-            ax.annotate(f'{int(p.get_height())}',
-                        (p.get_x() + p.get_width()/2., p.get_height()),
-                        ha='center', va='bottom')
+            ax.annotate(f'{int(p.get_height())}',(p.get_x()+p.get_width()/2., p.get_height()),ha='center', va='bottom')
         st.pyplot(fig)
-
     elif opcion == 3:
-        st.info("Distribución de Digital Activity Score")
         data = df['DigitalActivityScore'].dropna()
-        data = data[(data >= 0) & (data <= 3)]
-        fig, ax = plt.subplots(figsize=(10, 6))
-        sns.histplot(data, bins=30, kde=False, ax=ax)
+        data = data[(data>=0)&(data<=3)]
+        fig, ax = plt.subplots(figsize=(10,6))
+        sns.histplot(data,bins=30,kde=False,ax=ax)
         ax.set_title("Distribución de Digital Activity Score")
         ax.set_xlabel("DigitalActivityScore")
         ax.set_ylabel("Count")
-        ax.set_xlim(0, 3)
-        ax.set_ylim(0, 14000)
-        ax.set_yticks(range(0, 15000, 2000))
+        ax.set_xlim(0,3)
+        ax.set_ylim(0,14000)
+        ax.set_yticks(range(0,15000,2000))
         st.pyplot(fig)
-
     elif opcion == 4:
-        st.info("Relación entre transacciones digitales y presenciales")
         fig, ax = plt.subplots(figsize=(6,4))
         sns.scatterplot(data=df, x='DigitalTransactionsCount', y='BranchTransactionsCount', ax=ax)
         ax.set_title("Transacciones digitales vs presenciales")
         st.pyplot(fig)
-
     elif opcion == 5:
-        st.info("Tipos de tarjeta por cliente")
-        color_map = {'Black':'#000000', 'Platinum':'#E5E4E2', 'Gold':'#FFD700', 'Classic':'#1E90FF'}
+        color_map = {'Black':'#000000','Platinum':'#E5E4E2','Gold':'#FFD700','Classic':'#1E90FF'}
         fig, ax = plt.subplots()
-        sns.countplot(data=df, x='CreditCardType', palette=color_map, ax=ax)
+        sns.countplot(data=df,x='CreditCardType',palette=color_map,ax=ax)
         ax.set_title("Tipos de tarjeta por cliente")
         for p in ax.patches:
-            height = p.get_height()
-            ax.annotate(f'{int(height)}', (p.get_x() + p.get_width()/2., height + 3),
-                        ha='center', va='bottom',
-                        fontsize=10,
-                        color='white' if p.get_facecolor() == (0,0,0,1) else 'black')
+            height=p.get_height()
+            ax.annotate(f'{int(height)}',(p.get_x()+p.get_width()/2., height+3),ha='center',va='bottom',
+                        fontsize=10,color='white' if p.get_facecolor()==(0,0,0,1) else 'black')
         st.pyplot(fig)
 
 # ==============================
-# Función de página de predicción
+# Página de predicción
 # ==============================
 def page_modelo():
     st.title("Predicción de Adopción Digital")
-    st.write("Ingrese los valores de las características del cliente:")
+    st.write("Ingrese los valores del cliente:")
 
-    if modelo is None or scaler is None or encoder is None:
-        st.warning("Modelo o transformador no cargado. No se puede realizar predicción.")
+    if modelo is None: 
+        st.warning("Modelo no cargado. No se puede predecir.")
         return
 
-    # Entradas numéricas del usuario
+    # Entradas numéricas
     transaction = st.number_input("TransactionAmount (INR)", value=5000)
     balance = st.number_input("CustAccountBalance", value=10000)
     digital_txn = st.number_input("DigitalTransactionsCount", value=20)
@@ -177,27 +147,19 @@ def page_modelo():
     age = st.number_input("CustomerAge", value=30)
     tenure = st.number_input("CustomerTenureYears", value=2)
 
-    # Creamos un DataFrame completo con todas las columnas numéricas
+    # Crear dataframe con todas las columnas numéricas en el orden correcto
     X_pred = pd.DataFrame(columns=num_cols)
     for col in num_cols:
-        if col == 'TransactionAmount (INR)':
-            X_pred[col] = [transaction]
-        elif col == 'CustAccountBalance':
-            X_pred[col] = [balance]
-        elif col == 'DigitalTransactionsCount':
-            X_pred[col] = [digital_txn]
-        elif col == 'BranchTransactionsCount':
-            X_pred[col] = [branch_txn]
-        elif col == 'SpendBalanceRatio':
-            X_pred[col] = [spend_ratio]
-        elif col == 'CustomerAge':
-            X_pred[col] = [age]
-        elif col == 'CustomerTenureYears':
-            X_pred[col] = [tenure]
-        else:
-            X_pred[col] = [df[col].median()]
+        if col == 'TransactionAmount (INR)': X_pred[col] = [transaction]
+        elif col == 'CustAccountBalance': X_pred[col] = [balance]
+        elif col == 'DigitalTransactionsCount': X_pred[col] = [digital_txn]
+        elif col == 'BranchTransactionsCount': X_pred[col] = [branch_txn]
+        elif col == 'SpendBalanceRatio': X_pred[col] = [spend_ratio]
+        elif col == 'CustomerAge': X_pred[col] = [age]
+        elif col == 'CustomerTenureYears': X_pred[col] = [tenure]
+        else: X_pred[col] = [0]  # columnas adicionales que no se ingresan
 
-    # Escalado
+    # Escalar
     X_pred[num_cols] = scaler.transform(X_pred[num_cols])
 
     # Predicción
