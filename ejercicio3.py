@@ -72,21 +72,26 @@ sns.countplot(data=df, x='CustGender')
 elif opcion == 3:
     st.info("**Distribución de Digital Activity Score**")
 
-    # Convertir a numérico y eliminar NaN
-    data = pd.to_numeric(df["DigitalActivityScore"], errors="coerce").dropna()
+    # Convertir a float y eliminar NaN
+    df["DigitalActivityScore"] = pd.to_numeric(df["DigitalActivityScore"], errors="coerce")
+    data = df["DigitalActivityScore"].dropna()
+
+    st.write("Tipo de datos:", data.dtype)
+    st.write("Resumen de datos:", data.describe())
 
     if data.empty:
         st.error("No hay datos válidos para Digital Activity Score")
     else:
         fig, ax = plt.subplots()
-        sns.histplot(data, bins=30, kde=True, ax=ax)
+        sns.histplot(data, bins=30, kde=True, ax=ax, discrete=False)
         ax.set_title("Distribución de Digital Activity Score")
         st.pyplot(fig)
 
     st.code("""
-sns.histplot(df["DigitalActivityScore"], bins=30)
+sns.histplot(df["DigitalActivityScore"], bins=30, kde=True)
 plt.title("Distribución de Digital Activity Score")
 """, language="python")
+
 
 
 
