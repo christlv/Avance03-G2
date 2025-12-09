@@ -55,13 +55,21 @@ elif opcion == 2:
 # ---------------- 3️⃣ Distribución Digital Activity Score ----------------
 elif opcion == 3:
     st.info("Distribución de Digital Activity Score")
+
+    # Filtrar solo valores finitos
+    data = df['DigitalActivityScore']
+    data = data[pd.notnull(data) & pd.to_numeric(data, errors='coerce').notnull()]
+
+    # Crear figura
     fig, ax = plt.subplots()
-    min_val, max_val = df['DigitalActivityScore'].min(), df['DigitalActivityScore'].max()
-    sns.histplot(df['DigitalActivityScore'], bins=30, binrange=(min_val, max_val), kde=False, ax=ax)
+    sns.histplot(data, bins=30, kde=False, ax=ax)
     ax.set_title("Distribución de Digital Activity Score")
     ax.set_xlabel("DigitalActivityScore")
     ax.set_ylabel("Frecuencia")
-    plot_fig(fig)
+
+    # Mostrar gráfico
+    st.pyplot(fig)
+
 
 # ---------------- 4️⃣ Relación transacciones ----------------
 elif opcion == 4:
