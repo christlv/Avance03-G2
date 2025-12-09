@@ -72,7 +72,8 @@ sns.countplot(data=df, x='CustGender')
 elif opcion == 3:
     st.info("**Distribución de Digital Activity Score**")
 
-    fig, ax = new_fig()
+    #fig, ax = new_fig()
+    fig, ax = plt.subplots()
     sns.histplot(df['DigitalActivityScore'], bins=30, kde=True, ax=ax)
     ax.set_title("Distribución de Digital Activity Score")
 
@@ -81,6 +82,8 @@ elif opcion == 3:
     st.code("""
 sns.histplot(df['DigitalActivityScore'], bins=30)
 """, language="python")
+
+
 
 # ------------------------- 4️⃣ RELACIÓN DE TRANSACCIONES -------------------------
 elif opcion == 4:
