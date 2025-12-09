@@ -10,7 +10,7 @@ st.write("Autor: Christian Torres | ISIL")
 st.write("EDA - segmentación y el análisis del comportamiento digital")
 
 # Cargar datos (ajusta la ruta si es necesario)
-# df = pd.read_csv("ruta/dataset.csv")
+df = pd.read_csv("dataset_digital_adoptionv2.xlsx")
 
 opcion = st.slider("Selecciona un punto del timeline", 1, 5, 1)
 
