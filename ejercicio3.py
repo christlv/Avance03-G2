@@ -3,7 +3,7 @@ import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
 import seaborn as sns
-import pickle
+import joblib
 import os
 
 # ==============================
@@ -32,12 +32,9 @@ def load_model():
             st.error(f"No se encontraron los archivos: {', '.join(missing_files)}")
             return None, None, None
 
-        with open("modelo_lightgbm.pkl", "rb") as f:
-            modelo = pickle.load(f)
-        with open("encoder.pkl", "rb") as f:
-            encoder = pickle.load(f)
-        with open("scaler.pkl", "rb") as f:
-            scaler = pickle.load(f)
+        modelo = joblib.load("modelo_lightgbm.pkl")
+        encoder = joblib.load("encoder.pkl")
+        scaler = joblib.load("scaler.pkl")
 
         st.success("✅ Modelo y transformadores cargados correctamente")
         return modelo, encoder, scaler
@@ -171,7 +168,7 @@ def page_modelo():
         st.warning("Modelo no cargado. No se puede realizar predicción.")
         return
 
-    # Entradas numéricas (ejemplo)
+    # Entradas numéricas
     transaction = st.number_input("TransactionAmount (INR)", value=5000)
     balance = st.number_input("CustAccountBalance", value=10000)
     digital_txn = st.number_input("DigitalTransactionsCount", value=20)
@@ -185,8 +182,11 @@ def page_modelo():
                           columns=['TransactionAmount (INR)','CustAccountBalance','DigitalTransactionsCount',
                                    'BranchTransactionsCount','SpendBalanceRatio','CustomerAge','CustomerTenureYears'])
     
-    # Escalar
-    X_pred[num_cols] = scaler.transform(X_pred[num_cols])
+    # Aplicar encoder y scaler
+    if encoder and scaler:
+        X_pred[cat_cols] = X_pred[cat_cols].astype(str)
+        X_pred[cat_cols] = encoder.transform(X_pred[cat_cols])
+        X_pred[num_cols] = scaler.transform(X_pred[num_cols])
 
     # Predicción
     pred = modelo.predict(X_pred)
