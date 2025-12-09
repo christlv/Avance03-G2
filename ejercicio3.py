@@ -12,52 +12,55 @@ import os
 st.set_page_config(page_title="Sesión 2 | ISIL", layout="centered")
 
 # ==============================
-# Funciones de carga
+# Cargar dataset
 # ==============================
 @st.cache_data
 def load_data():
     return pd.read_excel("dataset_digital_adoptionv2.xlsx")
 
+df = load_data()
+
+# ==============================
+# Cargar modelo, encoder y scaler
+# ==============================
 @st.cache_data
-def load_model_files():
+def load_model():
     try:
-        files = ["modelo_lightgbm.pkl", "encoder.pkl", "scaler.pkl", "num_cols.pkl", "cat_cols.pkl"]
-        missing = [f for f in files if not os.path.isfile(f)]
-        if missing:
-            st.error(f"No se encontraron los archivos: {', '.join(missing)}")
+        expected_files = ["modelo_lightgbm.pkl", "encoder.pkl", "scaler.pkl", "num_cols.pkl", "cat_cols.pkl"]
+        missing_files = [f for f in expected_files if not os.path.isfile(f)]
+        if missing_files:
+            st.error(f"No se encontraron los archivos: {', '.join(missing_files)}")
             return None, None, None, None, None
-        
+
         modelo = joblib.load("modelo_lightgbm.pkl")
         encoder = joblib.load("encoder.pkl")
         scaler = joblib.load("scaler.pkl")
         num_cols = joblib.load("num_cols.pkl")
         cat_cols = joblib.load("cat_cols.pkl")
+
         st.success("✅ Modelo y transformadores cargados correctamente")
         return modelo, encoder, scaler, num_cols, cat_cols
+
     except Exception as e:
-        st.error(f"Error cargando archivos: {e}")
+        st.error(f"Error cargando modelo: {e}")
         return None, None, None, None, None
 
-# ==============================
-# Cargar datos y modelos
-# ==============================
-df = load_data()
-modelo, encoder, scaler, num_cols, cat_cols = load_model_files()
-target = "digital_adoption_likelihood"
+modelo, encoder, scaler, num_cols, cat_cols = load_model()
 
 # ==============================
 # Preprocesamiento inicial para gráficas
 # ==============================
 df = df.replace([np.inf, -np.inf], np.nan)
+target = "digital_adoption_likelihood"
 df = df.dropna(subset=[target])
 df[target] = df[target].astype(int)
 
-num_cols_all = [c for c in df.select_dtypes(include=['float64','int64']).columns if c != target]
-cat_cols_all = [c for c in df.select_dtypes(include=['object']).columns if c != target]
+num_cols_df = [c for c in df.select_dtypes(include=['float64', 'int64']).columns if c != target]
+cat_cols_df = [c for c in df.select_dtypes(include=['object']).columns if c != target]
 
-df[num_cols_all] = df[num_cols_all].fillna(df[num_cols_all].median())
-for c in cat_cols_all:
-    df[c] = df[c].fillna(df[c].mode()[0])
+df[num_cols_df] = df[num_cols_df].fillna(df[num_cols_df].median())
+for col in cat_cols_df:
+    df[col] = df[col].fillna(df[col].mode()[0])
 
 # Clip de outliers
 cols_to_clip = [
@@ -83,23 +86,28 @@ def normalize(col):
 df["norm_digital_txn"] = normalize(df["DigitalTransactionsCount"])
 df["norm_spend_ratio"] = normalize(df["SpendBalanceRatio"])
 df["norm_tenure"] = normalize(df["CustomerTenureYears"])
-df["DigitalActivityScore"] = df["norm_digital_txn"] + df["norm_spend_ratio"] + df["norm_tenure"]
+
+df["DigitalActivityScore"] = (
+    df["norm_digital_txn"] +
+    df["norm_spend_ratio"] +
+    df["norm_tenure"]
+)
 
 # ==============================
-# Página de gráficas
+# Función de página de gráficas
 # ==============================
 def page_segmentacion():
     st.title("Segmentación de Clientes por Comportamiento Digital | Timeline")
     st.write("Autor: Christian Torres | ISIL")
     st.write("EDA - segmentación y análisis del comportamiento digital")
-
+    
     opcion = st.slider("Selecciona un punto del timeline", 1, 5, 1)
-
+    
     if opcion == 1:
         st.info("Distribución de adopción digital")
         counts = df[target].value_counts()
         fig, ax = plt.subplots()
-        counts.plot(kind='bar', color=['skyblue','orange'], ax=ax)
+        counts.plot(kind='bar', color=['skyblue', 'orange'], ax=ax)
         ax.set_title("Distribución de adopción digital")
         for i, val in enumerate(counts):
             ax.text(i, val + 2, str(val), ha='center', va='bottom')
@@ -111,8 +119,7 @@ def page_segmentacion():
         sns.countplot(data=df, x='CustGender', palette=['pink','skyblue'], ax=ax)
         ax.set_title("Distribución de género")
         for p in ax.patches:
-            ax.annotate(f'{int(p.get_height())}', (p.get_x() + p.get_width()/2., p.get_height()),
-                        ha='center', va='bottom')
+            ax.annotate(f'{int(p.get_height())}', (p.get_x() + p.get_width()/2., p.get_height()), ha='center', va='bottom')
         st.pyplot(fig)
 
     elif opcion == 3:
@@ -151,7 +158,7 @@ def page_segmentacion():
         st.pyplot(fig)
 
 # ==============================
-# Página de predicción
+# Función de página de predicción
 # ==============================
 def page_modelo():
     st.title("Predicción de Adopción Digital")
@@ -161,22 +168,25 @@ def page_modelo():
         st.warning("Modelo no cargado. No se puede realizar predicción.")
         return
 
-    # Crear un diccionario de inputs
-    input_data = {}
+    # Entradas numéricas
+    inputs_num = {}
     for col in num_cols:
-        val = st.number_input(col, value=0)
-        input_data[col] = val
+        inputs_num[col] = st.number_input(col, value=float(df[col].median()))
+
+    # Entradas categóricas
+    inputs_cat = {}
     for col in cat_cols:
-        val = st.text_input(col, value="")
-        input_data[col] = val
+        options = df[col].unique().tolist()
+        inputs_cat[col] = st.selectbox(col, options)
 
-    X_pred = pd.DataFrame([input_data])
+    # Crear dataframe de predicción
+    X_pred = pd.DataFrame([ {**inputs_num, **inputs_cat} ])
 
-    # 🔹 Transformar categóricas con el encoder (todas a la vez)
-    X_pred[cat_cols] = encoder.transform(X_pred[cat_cols])
-
-    # 🔹 Escalar numéricas
+    # Escalar numéricas
     X_pred[num_cols] = scaler.transform(X_pred[num_cols])
+
+    # Codificar categóricas con manejo de valores desconocidos
+    X_pred[cat_cols] = encoder.transform(X_pred[cat_cols].astype(str))
 
     # Predicción
     pred = modelo.predict(X_pred)
