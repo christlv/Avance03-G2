@@ -79,8 +79,14 @@ elif opcion == 3:
     if data.empty:
         st.error("No hay datos numéricos válidos para Digital Activity Score")
     else:
+        # Ver el rango de datos
+        min_val = data.min()
+        max_val = data.max()
+        st.write(f"Rango de DigitalActivityScore: {min_val} a {max_val}")
+
         fig, ax = plt.subplots()
-        sns.histplot(data, bins=30, kde=True, ax=ax)
+        # Forzar bins entre min y max
+        sns.histplot(data, bins=30, binrange=(min_val, max_val), kde=True, ax=ax)
         ax.set_title("Distribución de Digital Activity Score")
         st.pyplot(fig)
 
@@ -88,6 +94,7 @@ elif opcion == 3:
 sns.histplot(df["DigitalActivityScore"], bins=30)
 plt.title("Distribución de Digital Activity Score")
 """, language="python")
+
 
 
 
