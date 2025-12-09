@@ -56,19 +56,24 @@ elif opcion == 2:
 elif opcion == 3:
     st.info("Distribución de Digital Activity Score")
 
-    # Filtrar datos para quitar NaN o valores no numéricos
+    # Filtrar valores y evitar nans
     data = df['DigitalActivityScore'].dropna()
-    data = data[(data >= 0) & (data <= 3)]  # Limitar rango como en Colab
+    data = data[(data >= 0) & (data <= 3)]
 
-    fig, ax = plt.subplots()
+    fig, ax = plt.subplots(figsize=(10, 6))
     sns.histplot(data, bins=30, kde=False, ax=ax)
 
     ax.set_title("Distribución de Digital Activity Score")
     ax.set_xlabel("DigitalActivityScore")
     ax.set_ylabel("Count")
-    ax.set_xlim(0, 3)  # Fijar límite en eje X como en Colab
+    ax.set_xlim(0, 3)
+
+    # Ajustar el eje y al rango que tienes en Colab
+    ax.set_ylim(0, 14000)
+    ax.set_yticks(range(0, 15000, 2000))
 
     st.pyplot(fig)
+
 
 
 
