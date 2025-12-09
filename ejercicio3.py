@@ -78,12 +78,21 @@ elif opcion == 3:
     if data.empty:
         st.error("No hay datos válidos para Digital Activity Score")
     else:
+        # Forzar un rango continuo: desde min-0.1 hasta max+0.1
+        min_val = data.min() - 0.1
+        max_val = data.max() + 0.1
+
         fig, ax = plt.subplots()
-        # Forzar bins que cubran el rango de los datos
-        bins = 30
-        sns.histplot(data, bins=bins, kde=False, ax=ax)  # OJO: desactivamos kde para que se vea igual que Colab
+        sns.histplot(
+            data,
+            bins=30,              # cantidad de barras
+            binrange=(min_val, max_val),
+            kde=False,            # igual que en Colab
+            ax=ax
+        )
         ax.set_title("Distribución de Digital Activity Score")
         st.pyplot(fig)
+
 
 
 
