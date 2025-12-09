@@ -14,7 +14,11 @@ st.write("EDA - segmentación y el análisis del comportamiento digital")
 
 # ------------------------- CARGA DE DATOS -------------------------
 # Asegúrate de que el archivo esté en tu repo
-df = pd.read_excel("dataset_digital_adoptionv2.xlsx")
+@st.cache_data
+def load_data():
+    return pd.read_excel("dataset_digital_adoptionv2.xlsx")
+    df = load_data()
+#df = pd.read_excel("dataset_digital_adoptionv2.xlsx")
 
 # ------------------------- TIMELINE -------------------------
 opcion = st.slider("Selecciona un punto del timeline", 1, 5, 1)
