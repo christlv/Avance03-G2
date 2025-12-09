@@ -3,7 +3,6 @@ import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
 import seaborn as sns
-import pickle
 import joblib
 import os
 
@@ -31,12 +30,12 @@ def load_model():
         missing_files = [f for f in expected_files if not os.path.isfile(f)]
         if missing_files:
             st.error(f"No se encontraron los archivos: {', '.join(missing_files)}")
-            return None, None, None, None
+            return None, None, None, None, None
 
         modelo = joblib.load("modelo_lightgbm.pkl")
         encoder = joblib.load("encoder.pkl")
         scaler = joblib.load("scaler.pkl")
-        columns = joblib.load("columns.pkl")  # Todas las columnas de entrenamiento
+        columns = joblib.load("columns.pkl")  # columnas exactas de entrenamiento
 
         st.success("✅ Modelo y transformadores cargados correctamente")
         return modelo, encoder, scaler, columns
@@ -95,9 +94,9 @@ def page_segmentacion():
     st.title("Segmentación de Clientes por Comportamiento Digital | Timeline")
     st.write("Autor: Christian Torres | ISIL")
     st.write("EDA - segmentación y análisis del comportamiento digital")
-    
+
     opcion = st.slider("Selecciona un punto del timeline", 1, 5, 1)
-    
+
     if opcion == 1:
         st.info("Distribución de adopción digital")
         counts = df[target].value_counts()
@@ -165,7 +164,7 @@ def page_modelo():
         st.warning("Modelo no cargado. No se puede realizar predicción.")
         return
 
-    # Entradas numéricas del usuario
+    # Entradas numéricas
     transaction = st.number_input("TransactionAmount (INR)", value=5000)
     balance = st.number_input("CustAccountBalance", value=10000)
     digital_txn = st.number_input("DigitalTransactionsCount", value=20)
@@ -174,28 +173,29 @@ def page_modelo():
     age = st.number_input("CustomerAge", value=30)
     tenure = st.number_input("CustomerTenureYears", value=2)
 
-    # Crear dataframe vacío con todas las columnas del modelo
+    # Crear dataframe con todas las columnas originales
     X_pred = pd.DataFrame(columns=columns)
-    X_pred.at[0, "TransactionAmount (INR)"] = transaction
-    X_pred.at[0, "CustAccountBalance"] = balance
-    X_pred.at[0, "DigitalTransactionsCount"] = digital_txn
-    X_pred.at[0, "BranchTransactionsCount"] = branch_txn
-    X_pred.at[0, "SpendBalanceRatio"] = spend_ratio
-    X_pred.at[0, "CustomerAge"] = age
-    X_pred.at[0, "CustomerTenureYears"] = tenure
+    X_pred.loc[0, "TransactionAmount (INR)"] = transaction
+    X_pred.loc[0, "CustAccountBalance"] = balance
+    X_pred.loc[0, "DigitalTransactionsCount"] = digital_txn
+    X_pred.loc[0, "BranchTransactionsCount"] = branch_txn
+    X_pred.loc[0, "SpendBalanceRatio"] = spend_ratio
+    X_pred.loc[0, "CustomerAge"] = age
+    X_pred.loc[0, "CustomerTenureYears"] = tenure
 
-    # Llenar las columnas numéricas restantes con 0
-    for col in num_cols:
+    # Rellenar columnas faltantes
+    for col in columns:
         if col not in X_pred.columns:
-            X_pred[col] = 0
+            if col in num_cols:
+                X_pred[col] = 0
+            elif col in cat_cols:
+                X_pred[col] = 'NA'
 
-    # Escalar
+    # Asegurar mismo orden de columnas
+    X_pred = X_pred[columns]
+
+    # Escalar y codificar
     X_pred[num_cols] = scaler.transform(X_pred[num_cols])
-
-    # Codificar categóricas
-    for c in cat_cols:
-        if c in X_pred.columns:
-            X_pred[c] = str(X_pred.at[0, c]) if pd.notnull(X_pred.at[0, c]) else 'NA'
     X_pred[cat_cols] = encoder.transform(X_pred[cat_cols])
 
     # Predicción
