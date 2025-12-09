@@ -92,6 +92,7 @@ plt.title("Distribución de Digital Activity Score")
 
 
 
+
 # ------------------------- 4️⃣ RELACIÓN DE TRANSACCIONES -------------------------
 elif opcion == 4:
     st.info("**Relación entre transacciones digitales y presenciales**")
