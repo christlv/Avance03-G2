@@ -25,18 +25,23 @@ df = load_data()
 # ==============================
 @st.cache_data
 def load_model():
-    expected_files = ["modelo_lightgbm.pkl", "encoder.pkl", "scaler.pkl"]
-    missing_files = [f for f in expected_files if not os.path.isfile(f)]
-    if missing_files:
-        st.error(f"No se encontraron los archivos: {', '.join(missing_files)}")
+    try:
+        expected_files = ["modelo_lightgbm.pkl", "encoder.pkl", "scaler.pkl"]
+        missing_files = [f for f in expected_files if not os.path.isfile(f)]
+        if missing_files:
+            st.error(f"No se encontraron los archivos: {', '.join(missing_files)}")
+            return None, None, None
+
+        modelo = joblib.load("modelo_lightgbm.pkl")
+        encoder = joblib.load("encoder.pkl")
+        scaler = joblib.load("scaler.pkl")
+
+        st.success("✅ Modelo y transformadores cargados correctamente")
+        return modelo, encoder, scaler
+
+    except Exception as e:
+        st.error(f"Error cargando modelo: {e}")
         return None, None, None
-
-    modelo = joblib.load("modelo_lightgbm.pkl")
-    encoder = joblib.load("encoder.pkl")
-    scaler = joblib.load("scaler.pkl")
-
-    st.success("✅ Modelo y transformadores cargados correctamente")
-    return modelo, encoder, scaler
 
 modelo, encoder, scaler = load_model()
 
@@ -79,7 +84,12 @@ def normalize(col):
 df["norm_digital_txn"] = normalize(df["DigitalTransactionsCount"])
 df["norm_spend_ratio"] = normalize(df["SpendBalanceRatio"])
 df["norm_tenure"] = normalize(df["CustomerTenureYears"])
-df["DigitalActivityScore"] = df["norm_digital_txn"] + df["norm_spend_ratio"] + df["norm_tenure"]
+
+df["DigitalActivityScore"] = (
+    df["norm_digital_txn"] +
+    df["norm_spend_ratio"] +
+    df["norm_tenure"]
+)
 
 # ==============================
 # Función de página de gráficas
@@ -155,7 +165,7 @@ def page_modelo():
     st.write("Ingrese los valores de las características del cliente:")
 
     if modelo is None or scaler is None:
-        st.warning("Modelo no cargado. No se puede realizar predicción.")
+        st.warning("Modelo o transformador no cargado. No se puede realizar predicción.")
         return
 
     # Entradas numéricas
@@ -173,7 +183,9 @@ def page_modelo():
                                    'BranchTransactionsCount','SpendBalanceRatio','CustomerAge','CustomerTenureYears'])
     
     # Escalar columnas numéricas
-    X_pred[num_cols] = scaler.transform(X_pred[num_cols])
+    num_cols_pred = ['TransactionAmount (INR)','CustAccountBalance','DigitalTransactionsCount',
+                     'BranchTransactionsCount','SpendBalanceRatio','CustomerAge','CustomerTenureYears']
+    X_pred[num_cols_pred] = scaler.transform(X_pred[num_cols_pred])
 
     # Predicción
     pred = modelo.predict(X_pred)
