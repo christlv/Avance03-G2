@@ -72,7 +72,7 @@ sns.countplot(data=df, x='CustGender')
 elif opcion == 3:
     st.info("**Distribución de Digital Activity Score**")
 
-    # Convertir a numérico y quitar NaN
+    # Convertir a numérico y eliminar NaN
     df["DigitalActivityScore"] = pd.to_numeric(df["DigitalActivityScore"], errors="coerce")
     data = df["DigitalActivityScore"].dropna()
 
